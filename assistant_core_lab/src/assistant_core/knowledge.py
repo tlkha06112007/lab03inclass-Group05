@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import csv
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 from assistant_core.errors import DataError
@@ -31,7 +31,7 @@ class OfficeDirectory:
                 return cls({r["name"].lower(): Office(r["name"], r["room"], r["hours"]) for r in rows})
         except FileNotFoundError as exc:
             raise DataError(f"office file not found: {path}") from exc
-        except csv.Error as exc:
+        except (csv.Error, UnicodeDecodeError) as exc:
             raise DataError(f"malformed office file: {path}") from exc
 
     @property
@@ -76,13 +76,17 @@ class Handbook:
             raise DataError(f"missing required rule keys in {path}") from exc
 
     def search(self, query: str) -> Rule | None:
-        q = query.lower()
-        # Direct substring match in text or title
-        for r in self._rules:
-            if q in r.text.lower() or q in r.title.lower():
-                return r
+        q = query.lower().strip()
+        if not q:
+            return None
 
-        # Keyword overlap score
+        # Direct substring match in text or title (skip short queries < 4 chars)
+        if len(q) >= 4:
+            for r in self._rules:
+                if q in r.text.lower() or q in r.title.lower():
+                    return r
+
+        # Keyword overlap score for words with length > 3
         words = [w for w in q.split() if len(w) > 3]
         if not words:
             return None
