@@ -1,9 +1,18 @@
 import pytest
-from assistant_core.service import AssistantService
+from assistant_core.models import Rule
+from assistant_core.responder import StubLLMResponder
 
 
-class StubSettings:
-    tuition_per_credit = 630_000  # Ví dụ 15 tín chỉ = 9,450,000 VND
+class Settings:
+    def __init__(
+        self,
+        credit_rate_vnd: int = 450_000,
+        retake_multiplier: float = 1.5,
+        max_credits: int = 30,
+    ):
+        self.credit_rate_vnd = credit_rate_vnd
+        self.retake_multiplier = retake_multiplier
+        self.max_credits = max_credits
 
 
 class StubOffice:
@@ -14,7 +23,8 @@ class StubOffice:
 
 
 class StubOffices:
-    names = ["Academic Affairs", "Student Affairs"]
+    # Tên văn phòng dạng chữ viết thường
+    names = ["academic office", "student office"]
 
     def find(self, text: str):
         if "academic" in text.lower():
@@ -22,36 +32,25 @@ class StubOffices:
         return None
 
 
-class StubRule:
-    def __init__(self, rule_id, title):
-        self.id = rule_id
-        self.title = title
-
-
 class StubHandbook:
     def search(self, text: str):
         if "thesis" in text.lower() or "rule" in text.lower():
-            return StubRule("R001", "Thesis Regulation")
+            # Sử dụng Rule thật có đầy đủ id, title, text để phục vụ TemplateResponder
+            return Rule(
+                id="R001",
+                title="Thesis Regulation",
+                text="Thesis registration rules and details.",
+            )
         return None
-
-
-class StubLLMResponder:
-    def __init__(self, fail=False):
-        self.fail = fail
-
-    def explain(self, text, rule):
-        if self.fail:
-            from assistant_core.errors import ProviderError
-            raise ProviderError("LLM Provider Timeout")
-        return f"LLM explanation for {rule.title}"
 
 
 @pytest.fixture
 def service():
-    """[Part B.3] Fixture khởi tạo AssistantService với các Stub dependencies"""
+    from assistant_core.service import AssistantService
+
     return AssistantService(
-        settings=StubSettings(),
+        settings=Settings(credit_rate_vnd=450_000),
         offices=StubOffices(),
         handbook=StubHandbook(),
-        responder=StubLLMResponder(fail=False)
+        responder=StubLLMResponder(fail=False),
     )

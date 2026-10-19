@@ -1,14 +1,13 @@
 import logging
 import time
-from typing import Dict, Callable
+from collections.abc import Callable
 
-from assistant_core.errors import ProviderError, ValidationError
+from assistant_core.errors import InvalidRequest, ProviderError
 from assistant_core.models import Intent, Message, Response, Source
+from assistant_core.responder import TemplateResponder
 from assistant_core.router import route
 from assistant_core.tools import parse_credits
-from assistant_core.responder import TemplateResponder
 
-# [Step 9] Thêm logger
 log = logging.getLogger(__name__)
 
 
@@ -20,8 +19,8 @@ class AssistantService:
         self.responder = responder
         self.fallback = TemplateResponder()
 
-        # Ánh xạ Intent tới hàm xử lý tương ứng
-        self._intent_handlers: Dict[Intent, Callable[[Message], Response]] = {
+        # Dùng dict[...] và Callable từ collections.abc cho Ruff
+        self._intent_handlers: dict[Intent, Callable[[Message], Response]] = {
             Intent.GREETING: self._handle_greeting,
             Intent.FEE: self._handle_fee,
             Intent.OFFICE: self._handle_office,
@@ -30,40 +29,55 @@ class AssistantService:
         }
 
     def handle(self, msg: Message) -> Response:
-        # [Step 9] Kiểm tra tin nhắn rỗng -> raise ValidationError
-        if not msg.text or not msg.text.strip():
-            raise ValidationError("Message text cannot be empty.")
+        # Bẫy tin nhắn chỉ chứa khoảng trắng
+        if not msg.text.strip():
+            raise InvalidRequest("Message text cannot be empty or whitespace.")
 
-        # Đo latency bằng time.perf_counter()
-        start_time = time.perf_counter()
+        start = time.perf_counter()
 
         intent = route(msg.text, self.offices.names)
         handler = self._intent_handlers.get(intent, self._handle_unknown)
 
         response = handler(msg)
-        
-        # Gán latency_ms vào response
-        elapsed_ms = (time.perf_counter() - start_time) * 1000
-        response.latency_ms = elapsed_ms
+
+        # Ghi log kèm extra theo đúng thiết kế của logging_setup.py
+        log.info(
+            "handled",
+            extra={
+                "intent": response.intent.value,
+                "latency_ms": round((time.perf_counter() - start) * 1000, 1),
+                "session": msg.session_id,
+                "degraded": response.degraded,
+            },
+        )
 
         return response
 
     def _handle_greeting(self, msg: Message) -> Response:
         return Response(
             answer="Hello! I can help with offices, fees and rules.",
-            intent=Intent.GREETING
+            intent=Intent.GREETING,
         )
 
     def _fee(self, text: str) -> Response:
-        """[Step 9] Tự viết _fee(): dùng parse_credits và tuition từ settings"""
         credits = parse_credits(text)
-        # Tính toán học phí dựa trên số tín chỉ và giá tiền mỗi tín chỉ từ settings
-        total_tuition = credits * self.settings.tuition_per_credit
-        # Trả về chuỗi theo đúng format yêu cầu: "Your tuition is 9,450,000 VND."
-        formatted_tuition = f"{total_tuition:,}"
+
+        # Khi số tín chỉ = 0
+        if credits == 0:
+            return Response(answer="How many credits?", intent=Intent.FEE)
+
+        # Khi số tín chỉ vượt max_credits (mặc định 30)
+        max_credits = getattr(self.settings, "max_credits", 30)
+        if credits > max_credits:
+            return Response(answer="too many credits", intent=Intent.FEE)
+
+        # Tính học phí theo credit_rate_vnd
+        rate = getattr(self.settings, "credit_rate_vnd", 450_000)
+        total = credits * rate
+
         return Response(
-            answer=f"Your tuition is {formatted_tuition} VND.",
-            intent=Intent.FEE
+            answer=f"Your tuition is {total:,} VND.",
+            intent=Intent.FEE,
         )
 
     def _handle_fee(self, msg: Message) -> Response:
@@ -83,7 +97,7 @@ class AssistantService:
     def _handle_unknown(self, msg: Message) -> Response:
         return Response(
             answer="Sorry, I don't know that yet.",
-            intent=Intent.UNKNOWN
+            intent=Intent.UNKNOWN,
         )
 
     def _rule(self, text: str) -> Response:
@@ -91,7 +105,7 @@ class AssistantService:
         if rule is None:
             return Response(
                 answer="Sorry, I don't know that yet.",
-                intent=Intent.UNKNOWN
+                intent=Intent.UNKNOWN,
             )
 
         sources = [Source(id=rule.id, title=rule.title)]
@@ -100,7 +114,7 @@ class AssistantService:
             return Response(
                 answer=self.responder.explain(text, rule),
                 intent=Intent.RULE,
-                sources=sources
+                sources=sources,
             )
         except ProviderError:
             log.warning("provider failed; using template fallback")
@@ -109,5 +123,5 @@ class AssistantService:
                 answer=answer,
                 intent=Intent.RULE,
                 sources=sources,
-                degraded=True
+                degraded=True,
             )

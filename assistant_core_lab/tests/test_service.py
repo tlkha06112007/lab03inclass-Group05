@@ -1,7 +1,9 @@
 import pytest
-from assistant_core.errors import ValidationError
+from pydantic import ValidationError
+
+from assistant_core.errors import InvalidRequest
 from assistant_core.models import Intent, Message
-from tests.conftest import StubLLMResponder
+from assistant_core.responder import StubLLMResponder
 
 
 def test_greeting(service):
@@ -12,10 +14,21 @@ def test_greeting(service):
 
 
 def test_fee_calculation(service):
-    """Test tính học phí (15 credits * 630,000 = 9,450,000 VND)"""
-    res = service.handle(Message(text="I register 15 credits"))
+    """Test học phí với câu hỏi chứa từ 'tuition' (21 tín chỉ * 450,000 = 9,450,000 VND)"""
+    res = service.handle(Message(text="What is the tuition for 21 credits?"))
     assert res.intent == Intent.FEE
     assert res.answer == "Your tuition is 9,450,000 VND."
+
+
+def test_fee_edge_cases(service):
+    """Test các trường hợp 0 tín chỉ và vượt quá 30 tín chỉ"""
+    res_zero = service.handle(Message(text="What is the tuition for 0 credits?"))
+    assert res_zero.intent == Intent.FEE
+    assert res_zero.answer == "How many credits?"
+
+    res_max = service.handle(Message(text="What is the tuition for 35 credits?"))
+    assert res_max.intent == Intent.FEE
+    assert res_max.answer == "too many credits"
 
 
 def test_office_lookup(service):
@@ -26,26 +39,30 @@ def test_office_lookup(service):
 
 
 def test_unknown_intent(service):
-    """Test xử lý câu hỏi không xác định / không tìm thấy rule"""
+    """Test câu hỏi không thuộc intent nào"""
     res = service.handle(Message(text="random unknown query xyz"))
     assert res.intent == Intent.UNKNOWN
     assert res.answer == "Sorry, I don't know that yet."
 
 
-def test_empty_message_raises_validation_error(service):
-    """Test tin nhắn rỗng hoặc toàn khoảng trắng phải raise ValidationError"""
+def test_empty_message_validation_error():
+    """Chuỗi rỗng '' bị Pydantic ValidationError chặn ngay từ khởi tạo Message"""
     with pytest.raises(ValidationError):
-        service.handle(Message(text=""))
+        Message(text="")
 
-    with pytest.raises(ValidationError):
-        service.handle(Message(text="   "))
+
+def test_whitespace_message_invalid_request(service):
+    """Chuỗi chỉ có khoảng trắng '   ' đi qua Message nhưng bị handle() chặn bằng InvalidRequest"""
+    msg = Message(text="   ")
+    with pytest.raises(InvalidRequest):
+        service.handle(msg)
 
 
 def test_fallback_when_provider_fails(service):
-    """[Step 9] Test fallback PDF cho sẵn khi LLM Provider bị lỗi"""
+    """Test fallback PDF khi LLM Provider gặp sự cố"""
     service.responder = StubLLMResponder(fail=True)
     r = service.handle(Message(text="thesis registration credits"))
-    
+
     assert r.degraded is True
     assert r.sources is not None
     assert len(r.sources) > 0
