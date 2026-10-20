@@ -21,7 +21,7 @@
 
 - `Message`: `text` (1-2000 chars), `session_id`
 - `Response`: `answer`, `intent`, `sources[]`, `degraded` (True if a fallback was used)
-- Errors: invalid input raises `ValidationError`; startup raises `ConfigError` / `DataError`; provider failures never reach the caller (a fallback answers instead).
+- Errors: an empty `text` is rejected by `Message` (`ValidationError`); whitespace-only text raises `InvalidRequest`; startup raises `ConfigError` / `DataError`; provider failures never reach the caller (a fallback answers instead, with `degraded=True`). A fee question the tools cannot compute (for example, credits out of range) is answered with an explanatory message instead of raising.
 
 The CLI, the future FastAPI backend and the UI all call this one method.
 
