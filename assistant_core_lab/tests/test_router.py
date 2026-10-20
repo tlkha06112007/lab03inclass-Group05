@@ -1,5 +1,4 @@
 from assistant_core.models import Intent
-
 from assistant_core.router import route
 
 OFFICES = {"training office", "library"}

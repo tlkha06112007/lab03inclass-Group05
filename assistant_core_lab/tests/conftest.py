@@ -1,4 +1,5 @@
 import pytest
+
 from assistant_core.config import Settings
 from assistant_core.knowledge import Rule
 from assistant_core.responder import StubLLMResponder
