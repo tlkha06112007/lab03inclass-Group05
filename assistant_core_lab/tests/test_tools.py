@@ -1,6 +1,6 @@
 import pytest
-from assistant_core.exceptions import InvalidRequest
 
+from assistant_core.errors import InvalidRequest
 from assistant_core.tools import parse_credits, tuition
 
 
