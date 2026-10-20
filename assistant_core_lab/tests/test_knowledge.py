@@ -53,10 +53,12 @@ def test_office_find_returns_none_when_not_found():
 
 
 def test_office_find_selects_longest_matching_name():
-    offices = OfficeDirectory({
-        "office": Office("Office", "101", "8-17"),
-        "training office": Office("Training Office", "I.101", "7:30-16:30"),
-    })
+    offices = OfficeDirectory(
+        {
+            "office": Office("Office", "101", "8-17"),
+            "training office": Office("Training Office", "I.101", "7:30-16:30"),
+        }
+    )
     result = offices.find("where is the training office?")
     assert result is not None
     assert result.name == "Training Office"
