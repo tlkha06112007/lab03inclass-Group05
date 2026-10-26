@@ -22,6 +22,11 @@ ENV_VARS = {
     "retake_multiplier": "RETAKE_MULTIPLIER",
     "max_credits": "MAX_CREDITS",
     "log_level": "LOG_LEVEL",
+    "weather_url": "WEATHER_URL",
+    "campus_lat": "CAMPUS_LAT",
+    "campus_lon": "CAMPUS_LON",
+    "weather_timeout_s": "WEATHER_TIMEOUT_S",
+    "rate_limit_per_min": "RATE_LIMIT_PER_MIN",
 }
 
 
@@ -35,6 +40,13 @@ class Settings(BaseModel):
     retake_multiplier: float = Field(default=1.5, ge=0)
     max_credits: int = Field(default=30, gt=0)
     log_level: str = "INFO"
+
+    # API Weather & Bonus settings
+    weather_url: str = "https://api.open-meteo.com/v1/forecast"
+    campus_lat: float = 10.7626
+    campus_lon: float = 106.6813
+    weather_timeout_s: float = 3.0
+    rate_limit_per_min: int = 60
 
     @field_validator("llm_provider")
     @classmethod
