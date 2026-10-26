@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from assistant_core.service import AssistantService
 
 
-def build_service() -> AssistantService:
+def build_service(*args, **kwargs) -> AssistantService:
     # Import here so --help works before the other modules are ready.
     from assistant_core.config import load_settings
     from assistant_core.knowledge import Handbook, OfficeDirectory
