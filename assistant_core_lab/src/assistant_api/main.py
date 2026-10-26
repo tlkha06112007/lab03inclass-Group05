@@ -83,7 +83,7 @@ def create_app(
     @app.get("/v1/feedback", response_model=list[FeedbackOut], tags=["feedback"], dependencies=[Depends(require_admin)])
     def list_feedback() -> list[FeedbackOut]:
         # TODO T3 (1 line): return the list. The API-key check is already done by `require_admin` above.
-        raise NotImplementedError("T3")
+        return feedback_store
 
     @app.get("/v1/weather", response_model=Weather, tags=["external"], responses={503: {"model": ErrorResponse}})
     def campus_weather() -> Weather:
