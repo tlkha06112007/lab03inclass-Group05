@@ -97,6 +97,9 @@ def create_app(
         # TODO T4 (4 lines): call weather.current() inside try/except.
         #   If ExternalServiceError happens, raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
         #   "Weather service unavailable") from None
-        raise NotImplementedError("T4")
+        try:
+            return weather.current()
+        except ExternalServiceError:
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Weather service unavailable") from None
 
     return app
