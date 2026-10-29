@@ -17,10 +17,10 @@ from fastapi.responses import JSONResponse
 from assistant_api.ratelimit import RateLimiter
 from assistant_api.schemas import ChatRequest, ChatResponse, ErrorResponse, FeedbackIn, FeedbackOut, Weather
 from assistant_api.weather import ExternalServiceError, WeatherClient
-from assistant_core.service import AssistantService
 from assistant_core.__main__ import build_service
-from assistant_core.models import Message # (hoặc .schemas tùy cấu trúc Lab 3)
 from assistant_core.config import Settings, load_settings
+from assistant_core.models import Message  # (hoặc .schemas tùy cấu trúc Lab 3)
+from assistant_core.service import AssistantService
 
 
 def create_app(

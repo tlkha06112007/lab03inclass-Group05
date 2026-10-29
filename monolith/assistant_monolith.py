@@ -28,11 +28,11 @@ def load():
         for row in r:
             offices[row[0].lower()] = row
         f.close()
-    except:
+    except Exception:
         print("could not load offices")
     try:
         handbook = json.load(open(BASE + "/data/handbook.json", encoding="utf-8"))
-    except:
+    except Exception:
         print("could not load handbook")
 
 
@@ -94,7 +94,7 @@ def handle(msg):
         if score > best_score:
             best_score = score
             best = rule
-    if best != None and best_score >= 1:
+    if best is not None and best_score >= 1:
         try:
             ans = llm("Answer using this rule: " + best["text"] + " Question: " + msg)
             return ans + " (source: " + best["id"] + ")"
@@ -137,7 +137,7 @@ def main():
     while True:
         try:
             q = input("> ")
-        except:
+        except Exception:
             break
         if q == "quit":
             break
