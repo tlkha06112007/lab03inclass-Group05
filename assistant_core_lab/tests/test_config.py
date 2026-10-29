@@ -118,7 +118,7 @@ def test_missing_env_file_is_fine(tmp_path, monkeypatch):
 def test_env_example_lists_all_seven_variables():
     example = dotenv_values(ROOT / ".env.example")
     assert set(example) == set(ENV_VARS.values())
-    assert len(example) == 7
+    assert len(example) == 12
 
 
 def test_env_example_matches_the_defaults():
