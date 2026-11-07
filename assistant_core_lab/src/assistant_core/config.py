@@ -27,6 +27,9 @@ ENV_VARS = {
     "campus_lon": "CAMPUS_LON",
     "weather_timeout_s": "WEATHER_TIMEOUT_S",
     "rate_limit_per_min": "RATE_LIMIT_PER_MIN",
+    "database_url": "DATABASE_URL",
+    "session_salt": "SESSION_SALT",
+    "api_admin_key": "API_ADMIN_KEY",
 }
 
 
@@ -47,6 +50,11 @@ class Settings(BaseModel):
     campus_lon: float = 106.6813
     weather_timeout_s: float = 3.0
     rate_limit_per_min: int = 60
+
+    # Lab 5: database and admin access
+    database_url: str = "sqlite:///assistant.db"
+    session_salt: str = Field(default="dev-salt", repr=False)
+    api_admin_key: str | None = Field(default=None, repr=False)
 
     @field_validator("llm_provider")
     @classmethod
