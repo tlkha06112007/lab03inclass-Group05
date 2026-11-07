@@ -7,9 +7,9 @@ Endpoints (v1): GET /health, POST /v1/chat, POST /v1/feedback, GET /v1/feedback 
 
 from __future__ import annotations
 
-from time import perf_counter
 import uuid
 from datetime import datetime, timezone
+from time import perf_counter
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
