@@ -8,7 +8,6 @@ Endpoints (v1): GET /health, POST /v1/chat, POST /v1/feedback, GET /v1/feedback 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from time import perf_counter
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
@@ -90,16 +89,9 @@ def create_app(
 
     @app.post("/v1/feedback", response_model=FeedbackOut, status_code=201, tags=["feedback"])
     def add_feedback(fb: FeedbackIn) -> FeedbackOut:
-        # TODO T2 (3 lines):
-        #   1. item = FeedbackOut(**fb.model_dump(), id=len(feedback_store) + 1, created_at=datetime.now(timezone.utc))
-        #   2. add item to feedback_store
-        #   3. return item
-        item = FeedbackOut(
-            **fb.model_dump(),
-            id=len(feedback_store) + 1,
-            created_at=datetime.now(timezone.utc),
-        )
-        feedback_store.append(item)
+        item = repo.add_feedback(fb.request_id, fb.rating, fb.comment)
+        if item is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Request not found")
         return item
 
     @app.get("/v1/feedback", response_model=list[FeedbackOut], tags=["feedback"], dependencies=[Depends(require_admin)])
