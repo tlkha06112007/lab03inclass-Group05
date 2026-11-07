@@ -9,11 +9,13 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from time import perf_counter
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from assistant_api.db import Repository, init_db, make_engine
 from assistant_api.ratelimit import RateLimiter
 from assistant_api.schemas import ChatRequest, ChatResponse, ErrorResponse, FeedbackIn, FeedbackOut, Weather
 from assistant_api.weather import ExternalServiceError, WeatherClient
@@ -32,7 +34,9 @@ def create_app(
         settings.weather_url, settings.campus_lat, settings.campus_lon, timeout_s=settings.weather_timeout_s
     )
     limiter = RateLimiter(settings.rate_limit_per_min)  # used only in the BONUS task
-    feedback_store: list[FeedbackOut] = []  # Lab 5 replaces this with a database
+    engine = make_engine(settings.database_url)
+    init_db(engine)
+    repo = Repository(engine, settings.session_salt)
 
     app = FastAPI(
         title="Study Assistant API", version="1.0.0", description="Backend of the CSC10014 Smart Virtual Assistant."
@@ -69,11 +73,20 @@ def create_app(
         client = request.client.host if request.client else "unknown"
         if not limiter.allow(client):
             raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many requests")
-        # TODO T1 (2 lines):
-        #   1. resp = service.handle(Message(text=req.message, session_id=req.session_id))
-        #   2. return ChatResponse(**resp.model_dump(), request_id=uuid.uuid4().hex[:12])
+        request_id = uuid.uuid4().hex[:12]
+        start = perf_counter()
         resp = service.handle(Message(text=req.message, session_id=req.session_id))
-        return ChatResponse(**resp.model_dump(), request_id=uuid.uuid4().hex[:12])
+        latency_ms = round((perf_counter() - start) * 1000, 2)
+        repo.record_interaction(
+            req.session_id,
+            request_id,
+            resp.intent.value,
+            None,
+            resp.intent.value != "unknown",
+            resp.degraded,
+            latency_ms,
+        )
+        return ChatResponse(**resp.model_dump(), request_id=request_id)
 
     @app.post("/v1/feedback", response_model=FeedbackOut, status_code=201, tags=["feedback"])
     def add_feedback(fb: FeedbackIn) -> FeedbackOut:
