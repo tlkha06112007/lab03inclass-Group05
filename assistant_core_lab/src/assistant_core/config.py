@@ -62,14 +62,14 @@ class Settings(BaseModel):
     database_url: str = "sqlite:///assistant.db"
     session_salt: str = Field(default="dev-salt", repr=False)
     api_admin_key: str | None = Field(default=None, repr=False)
-     #Lab 6: AI services
-     llm_timeout_s: float = 5.0
-     llm_model: str = "llama3.2"
-     llm_base_url: str | None = None
-     kb_dir: Path = Path("data/kb")
-     retrieval_kind: str = "bm25" # bm25 | tfidf | hybrid
-     retrieval_min_score: float = 2.0 # below this score we abstain
-     prompt_version: str = "answer_v1"
+    #Lab 6: AI services
+    llm_timeout_s: float = 5.0
+    llm_model: str = "llama3.2"
+    llm_base_url: str | None = None
+    kb_dir: Path = Path("data/kb")
+    retrieval_kind: str = "bm25" # bm25 | tfidf | hybrid
+    retrieval_min_score: float = 2.0 # below this score we abstain
+    prompt_version: str = "answer_v1"
 
     @field_validator("llm_provider")
     @classmethod
