@@ -32,3 +32,6 @@ class Response(BaseModel):
     intent: Intent
     sources: list[Source] = Field(default_factory=list)
     degraded: bool = False
+    escalate: bool = False  # True when the assistant abstained and suggests a human
+    path: str = "deterministic"  # deterministic | retrieval | llm | tool | abstain
+    confidence: float | None = None

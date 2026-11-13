@@ -80,7 +80,7 @@ def create_app(
             req.session_id,
             request_id,
             resp.intent.value,
-            None,
+            resp.sources[0].id if resp.sources else None,
             resp.intent.value != "unknown",
             resp.degraded,
             latency_ms,
