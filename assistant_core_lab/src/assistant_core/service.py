@@ -3,8 +3,8 @@ import time
 from collections.abc import Callable
 
 from assistant_core.errors import InvalidRequest, ProviderError
-from assistant_core.models import Intent, Message, Response, Source
 from assistant_core.guard import PRIVATE_REPLY, is_private_request
+from assistant_core.models import Intent, Message, Response, Source
 from assistant_core.responder import TemplateResponder
 from assistant_core.router import route
 from assistant_core.tools import parse_credits, tuition
@@ -13,13 +13,13 @@ log = logging.getLogger(__name__)
 
 
 class AssistantService:
-    def __init__(self, settings, offices, handbook, rag=None):
+    def __init__(self, settings, offices, handbook, responder, rag=None):
         self.settings = settings
         self.offices = offices
         self.handbook = handbook
         self.responder = responder
         self.fallback = TemplateResponder()
-        self.rag=rag
+        self.rag = rag
 
         self._intent_handlers: dict[Intent, Callable[[Message], Response]] = {
             Intent.GREETING: self._handle_greeting,
