@@ -58,6 +58,8 @@ def parse_draft(raw: str, allowed_ids: set[str]) -> AnswerDraft:
     #   (a) draft.source_ids is empty, or (b) it contains an id that is not in allowed_ids,
     #   raise ProviderError("answer cites sources that were not retrieved").
     #   Hint: set(draft.source_ids) <= allowed_ids means "all ids are allowed".
+    if not draft.abstain and (not draft.source_ids or not set(draft.source_ids) <= allowed_ids):
+        raise ProviderError("answer cites sources that were not retrieved")
     return draft
 
 
