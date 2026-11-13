@@ -3,6 +3,7 @@ import time
 from collections.abc import Callable
 
 from assistant_core.errors import InvalidRequest, ProviderError
+from assistant_core.guard import PRIVATE_REPLY, is_private_request
 from assistant_core.models import Intent, Message, Response, Source
 from assistant_core.responder import TemplateResponder
 from assistant_core.router import route
@@ -12,12 +13,13 @@ log = logging.getLogger(__name__)
 
 
 class AssistantService:
-    def __init__(self, settings, offices, handbook, responder):
+    def __init__(self, settings, offices, handbook, responder, rag=None):
         self.settings = settings
         self.offices = offices
         self.handbook = handbook
         self.responder = responder
         self.fallback = TemplateResponder()
+        self.rag = rag
 
         self._intent_handlers: dict[Intent, Callable[[Message], Response]] = {
             Intent.GREETING: self._handle_greeting,
@@ -100,6 +102,10 @@ class AssistantService:
         )
 
     def _rule(self, text: str) -> Response:
+        if self.rag is not None:
+            if is_private_request(text):
+                return Response(answer=PRIVATE_REPLY, intent=Intent.UNKNOWN, path="abstain", escalate=False)
+            return self.rag.answer(text)
         rule = self.handbook.search(text)
         if rule is None:
             return Response(

@@ -7,7 +7,7 @@ from assistant_core.responder import StubLLMResponder
 
 @pytest.fixture
 def settings():
-    return load_settings()
+    return load_settings().model_copy(update={"database_url": "sqlite://"})
 
 class StubOffice:
     def __init__(self, name: str, room: str, hours: str):

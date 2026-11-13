@@ -27,6 +27,16 @@ ENV_VARS = {
     "campus_lon": "CAMPUS_LON",
     "weather_timeout_s": "WEATHER_TIMEOUT_S",
     "rate_limit_per_min": "RATE_LIMIT_PER_MIN",
+    "database_url": "DATABASE_URL",
+    "session_salt": "SESSION_SALT",
+    "api_admin_key": "API_ADMIN_KEY",
+    "llm_timeout_s": "LLM_TIMEOUT_S",
+    "llm_model": "LLM_MODEL",
+    "llm_base_url": "LLM_BASE_URL",
+    "kb_dir": "KB_DIR",
+    "retrieval_kind": "RETRIEVAL_KIND",
+    "retrieval_min_score": "RETRIEVAL_MIN_SCORE",
+    "prompt_version": "PROMPT_VERSION",
 }
 
 
@@ -47,6 +57,19 @@ class Settings(BaseModel):
     campus_lon: float = 106.6813
     weather_timeout_s: float = 3.0
     rate_limit_per_min: int = 60
+
+    # Lab 5: database and admin access
+    database_url: str = "sqlite:///assistant.db"
+    session_salt: str = Field(default="dev-salt", repr=False)
+    api_admin_key: str | None = Field(default=None, repr=False)
+    #Lab 6: AI services
+    llm_timeout_s: float = 5.0
+    llm_model: str = "llama3.2"
+    llm_base_url: str | None = None
+    kb_dir: Path = Path("data/kb")
+    retrieval_kind: str = "bm25" # bm25 | tfidf | hybrid
+    retrieval_min_score: float = 2.0 # below this score we abstain
+    prompt_version: str = "answer_v1"
 
     @field_validator("llm_provider")
     @classmethod
@@ -101,6 +124,6 @@ def load_settings(
     except ValidationError as exc:
         raise ConfigError(_describe(exc.errors())) from None
 
-    if settings.llm_provider != "stub" and not settings.llm_api_key:
+    if settings.llm_provider == "openai" and not settings.llm_api_key:
         raise ConfigError(f"LLM_API_KEY is required when LLM_PROVIDER={settings.llm_provider!r}")
     return settings

@@ -8,7 +8,6 @@ Endpoints (v1): GET /health, POST /v1/chat, POST /v1/feedback, GET /v1/feedback 
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from time import perf_counter
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
@@ -81,7 +80,7 @@ def create_app(
             req.session_id,
             request_id,
             resp.intent.value,
-            None,
+            resp.sources[0].id if resp.sources else None,
             resp.intent.value != "unknown",
             resp.degraded,
             latency_ms,
@@ -90,22 +89,15 @@ def create_app(
 
     @app.post("/v1/feedback", response_model=FeedbackOut, status_code=201, tags=["feedback"])
     def add_feedback(fb: FeedbackIn) -> FeedbackOut:
-        # TODO T2 (3 lines):
-        #   1. item = FeedbackOut(**fb.model_dump(), id=len(feedback_store) + 1, created_at=datetime.now(timezone.utc))
-        #   2. add item to feedback_store
-        #   3. return item
-        item = FeedbackOut(
-            **fb.model_dump(),
-            id=len(feedback_store) + 1,
-            created_at=datetime.now(timezone.utc),
-        )
-        feedback_store.append(item)
+        item = repo.add_feedback(fb.request_id, fb.rating, fb.comment)
+        if item is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Request not found")
         return item
 
     @app.get("/v1/feedback", response_model=list[FeedbackOut], tags=["feedback"], dependencies=[Depends(require_admin)])
     def list_feedback() -> list[FeedbackOut]:
         # TODO T3 (1 line): return the list. The API-key check is already done by `require_admin` above.
-        return feedback_store
+        return repo.list_feedback()
 
     @app.get("/v1/weather", response_model=Weather, tags=["external"], responses={503: {"model": ErrorResponse}})
     def campus_weather() -> Weather:
