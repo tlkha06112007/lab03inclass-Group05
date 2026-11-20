@@ -1,9 +1,13 @@
 import pytest
 
-from assistant_core.config import Settings
+from assistant_core.config import Settings, load_settings
 from assistant_core.knowledge import Rule
 from assistant_core.responder import StubLLMResponder
 
+
+@pytest.fixture
+def settings():
+    return load_settings().model_copy(update={"database_url": "sqlite://"})
 
 class StubOffice:
     def __init__(self, name: str, room: str, hours: str):

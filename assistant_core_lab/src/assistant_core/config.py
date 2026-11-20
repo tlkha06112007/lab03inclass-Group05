@@ -1,19 +1,18 @@
-
 """Settings read from the environment (Twelve-Factor III) and validated."""
- 
+
 from __future__ import annotations
- 
+
 import os
 from collections.abc import Mapping
 from pathlib import Path
- 
+
 from dotenv import dotenv_values
 from pydantic import BaseModel, Field, ValidationError, field_validator
- 
+
 from assistant_core.errors import ConfigError
- 
+
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
- 
+
 # Settings field -> environment variable. Keep in sync with .env.example.
 ENV_VARS = {
     "data_dir": "ASSISTANT_DATA_DIR",
@@ -23,12 +22,27 @@ ENV_VARS = {
     "retake_multiplier": "RETAKE_MULTIPLIER",
     "max_credits": "MAX_CREDITS",
     "log_level": "LOG_LEVEL",
+    "weather_url": "WEATHER_URL",
+    "campus_lat": "CAMPUS_LAT",
+    "campus_lon": "CAMPUS_LON",
+    "weather_timeout_s": "WEATHER_TIMEOUT_S",
+    "rate_limit_per_min": "RATE_LIMIT_PER_MIN",
+    "database_url": "DATABASE_URL",
+    "session_salt": "SESSION_SALT",
+    "api_admin_key": "API_ADMIN_KEY",
+    "llm_timeout_s": "LLM_TIMEOUT_S",
+    "llm_model": "LLM_MODEL",
+    "llm_base_url": "LLM_BASE_URL",
+    "kb_dir": "KB_DIR",
+    "retrieval_kind": "RETRIEVAL_KIND",
+    "retrieval_min_score": "RETRIEVAL_MIN_SCORE",
+    "prompt_version": "PROMPT_VERSION",
 }
- 
- 
+
+
 class Settings(BaseModel):
     """All defaults live here, and only here."""
- 
+
     data_dir: Path = Path("data")
     llm_provider: str = "stub"
     llm_api_key: str | None = Field(default=None, repr=False)  # never printed
@@ -36,12 +50,32 @@ class Settings(BaseModel):
     retake_multiplier: float = Field(default=1.5, ge=0)
     max_credits: int = Field(default=30, gt=0)
     log_level: str = "INFO"
- 
+
+    # API Weather & Bonus settings
+    weather_url: str = "https://api.open-meteo.com/v1/forecast"
+    campus_lat: float = 10.7626
+    campus_lon: float = 106.6813
+    weather_timeout_s: float = 3.0
+    rate_limit_per_min: int = 60
+
+    # Lab 5: database and admin access
+    database_url: str = "sqlite:///assistant.db"
+    session_salt: str = Field(default="dev-salt", repr=False)
+    api_admin_key: str | None = Field(default=None, repr=False)
+    #Lab 6: AI services
+    llm_timeout_s: float = 5.0
+    llm_model: str = "llama3.2"
+    llm_base_url: str | None = None
+    kb_dir: Path = Path("data/kb")
+    retrieval_kind: str = "bm25" # bm25 | tfidf | hybrid
+    retrieval_min_score: float = 2.0 # below this score we abstain
+    prompt_version: str = "answer_v1"
+
     @field_validator("llm_provider")
     @classmethod
     def _normalise_provider(cls, value: str) -> str:
         return value.strip().lower()
- 
+
     @field_validator("log_level")
     @classmethod
     def _check_log_level(cls, value: str) -> str:
@@ -49,8 +83,8 @@ class Settings(BaseModel):
         if level not in LOG_LEVELS:
             raise ValueError(f"must be one of {', '.join(LOG_LEVELS)}")
         return level
- 
- 
+
+
 def _describe(errors: list) -> str:
     """Turn pydantic errors into 'ENV_VAR: problem' text, without echoing any input value."""
     parts = []
@@ -58,14 +92,14 @@ def _describe(errors: list) -> str:
         field = err["loc"][0] if err["loc"] else None
         parts.append(f"{ENV_VARS.get(field, field or 'settings')}: {err['msg']}")
     return "; ".join(parts)
- 
- 
+
+
 def load_settings(
     env_file: str | os.PathLike[str] | None = ".env",
     environ: Mapping[str, str] | None = None,
 ) -> Settings:
     """Build Settings from the environment.
- 
+
     environ=None (normal run): values come from the real environment, with the
     .env file as a fallback (real environment variables win, and os.environ is
     not modified). environ=<dict> (tests): only that dict is used, so a test never
@@ -78,19 +112,18 @@ def load_settings(
         env.update(os.environ)
     else:
         env = dict(environ)
- 
+
     values = {}
     for field, name in ENV_VARS.items():
         raw = (env.get(name) or "").strip()
         if raw:  # unset or empty -> use the default from Settings
             values[field] = raw
- 
+
     try:
         settings = Settings(**values)
     except ValidationError as exc:
         raise ConfigError(_describe(exc.errors())) from None
- 
-    if settings.llm_provider != "stub" and not settings.llm_api_key:
+
+    if settings.llm_provider == "openai" and not settings.llm_api_key:
         raise ConfigError(f"LLM_API_KEY is required when LLM_PROVIDER={settings.llm_provider!r}")
     return settings
-
