@@ -6,6 +6,7 @@ Write at least three tests. Each one must:
 Use the fixtures `service`, `settings` from conftest.py, or build a TestClient like tests/test_security.py.
 """
 from assistant_core.models import Message
+from ui.logic import format_sources
 
 
 def test_example_greeting_still_works(service):
@@ -13,6 +14,11 @@ def test_example_greeting_still_works(service):
     assert "Hello" in service.handle(Message(text="hi")).answer
 
 
-# def test_<your_bug_1>(...):
-# def test_<your_bug_2>(...):
-# def test_<your_bug_3>(...):
+def test_empty_sources_does_not_crash_ui():
+    """UI must show nothing (not crash) when the answer has no sources."""
+    assert format_sources([]) == ""
+
+
+def test_sources_use_em_dash_not_hyphen():
+    """Bug: a hyphen was typed instead of the em dash, so the sources line did not match the spec."""
+    assert format_sources([{"id": "S26#1", "title": "1 Library borrowing"}]) == "Sources: S26#1 — 1 Library borrowing"
