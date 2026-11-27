@@ -3,7 +3,7 @@ import time
 from collections.abc import Callable
 
 from assistant_core.errors import InvalidRequest, ProviderError
-from assistant_core.guard import PRIVATE_REPLY, is_private_request
+from assistant_core.guard import INJECTION_REPLY, PRIVATE_REPLY, is_private_request, looks_like_injection
 from assistant_core.models import Intent, Message, Response, Source
 from assistant_core.responder import TemplateResponder
 from assistant_core.router import route
@@ -36,10 +36,12 @@ class AssistantService:
 
         start = time.perf_counter()
 
-        intent = route(msg.text, self.offices.names)
-        handler = self._intent_handlers.get(intent, self._handle_unknown)
-
-        response = handler(msg)
+        if looks_like_injection(msg.text):  # Lab 8: refuse attempts to change the rules
+            response = Response(answer=INJECTION_REPLY, intent=Intent.UNKNOWN, path="abstain")
+        else:
+            intent = route(msg.text, self.offices.names)
+            handler = self._intent_handlers.get(intent, self._handle_unknown)
+            response = handler(msg)
 
         # Ghi log kèm extra theo thiết kế logging
         log.info(
