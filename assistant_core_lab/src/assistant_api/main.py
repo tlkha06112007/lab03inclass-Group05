@@ -25,7 +25,10 @@ from assistant_core.service import AssistantService
 
 
 def create_app(
-    settings: Settings | None = None, service: AssistantService | None = None, weather: WeatherClient | None = None
+    settings: Settings | None = None,
+    service: AssistantService | None = None,
+    weather: WeatherClient | None = None,
+    repo: Repository | None = None,
 ) -> FastAPI:
     settings = settings or load_settings()
     service = service or build_service(settings)
@@ -33,9 +36,10 @@ def create_app(
         settings.weather_url, settings.campus_lat, settings.campus_lon, timeout_s=settings.weather_timeout_s
     )
     limiter = RateLimiter(settings.rate_limit_per_min)  # used only in the BONUS task
-    engine = make_engine(settings.database_url)
-    init_db(engine)
-    repo = Repository(engine, settings.session_salt)
+    if repo is None:
+        engine = make_engine(settings.database_url)
+        init_db(engine)
+        repo = Repository(engine, settings.session_salt)
 
     app = FastAPI(
         title="Study Assistant API", version="1.0.0", description="Backend of the CSC10014 Smart Virtual Assistant."
