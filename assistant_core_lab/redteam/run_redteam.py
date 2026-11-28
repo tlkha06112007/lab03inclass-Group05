@@ -20,9 +20,9 @@ from fastapi.testclient import TestClient
 
 from assistant_api.db import Repository, init_db, make_engine
 from assistant_api.main import create_app
+from assistant_core.__main__ import build_service
 from assistant_core.config import load_settings
 from assistant_core.llm import StubLLM
-from assistant_core.service import build_service
 
 REFUSE_WORDS = ("can't", "cannot", "not confident", "only answer", "don't know")
 
